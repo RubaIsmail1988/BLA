@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # 1. Load dataset
-df = pd.read_csv("D:/SVU/My_Clases/second/MLT/MLT_Assainment/loan_prediction.csv")
+df = pd.read_csv("BLA/loan_prediction/dataset/loan_prediction.csv")
 df.drop("Loan_ID", axis=1, inplace=True)
 
 # 2. Handle missing values
@@ -39,7 +39,7 @@ for col in ['LoanAmount', 'ApplicantIncome', 'CoapplicantIncome']:
 
 # 4. One-hot encode categorical variables
 categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-categorical_cols.remove('Loan_Status')  # Remove target column from the list
+categorical_cols.remove('Loan_Status')
 df = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
 
 # 5. Encode target
@@ -79,20 +79,22 @@ report = classification_report(y_test, y_pred, output_dict=True)
 conf_matrix = confusion_matrix(y_test, y_pred)
 
 print(f"Accuracy: {accuracy}")
-
 print("Classification Report:")
 print(classification_report(y_test, y_pred, digits=2))
 
-# 12. Save model
-os.makedirs("loan_prediction/model", exist_ok=True)
+# 12. Ensure model directory exists
+model_dir = "BLA/loan_prediction/model"
+os.makedirs(model_dir, exist_ok=True)
+
+# 13. Save model
 joblib.dump({
     'model': model,
     'scaler': scaler,
-    'feature_names': X.columns.tolist()
-}, "loan_prediction/model/lr_model.pkl")
+    'feature_names_in_': X.columns.tolist()
+}, os.path.join(model_dir, "lr_model.pkl"))
 
-# 13. Save metrics
-with open("lr_metrics.json", "w") as f:
+# 14. Save metrics
+with open(os.path.join(model_dir, "lr_metrics.json"), "w") as f:
     json.dump({
         "accuracy": accuracy,
         "confusion_matrix": conf_matrix.tolist(),
@@ -101,17 +103,13 @@ with open("lr_metrics.json", "w") as f:
 
 print("LogisticRegression model and metrics saved successfully.")
 
-# Load the saved model and scaler
-loaded_model = joblib.load("loan_prediction/model/lr_model.pkl")
-
-# Predict
+# Load and predict (optional check)
+loaded_model = joblib.load(os.path.join(model_dir, "lr_model.pkl"))
 y_pred = loaded_model['model'].predict(loaded_model['scaler'].transform(X))
 print("Predictions on the original scale:", y_pred)
 
-# 14. Visualize results
+# 15. Visualize
 plt.figure(figsize=(10, 5))
-
-# Plot: Loan Amount vs Applicant Income
 plt.subplot(1, 2, 1)
 plt.scatter(df['ApplicantIncome'], df['LoanAmount'], alpha=0.6)
 plt.xlabel('Applicant Income (Capped)')
@@ -119,7 +117,6 @@ plt.ylabel('Loan Amount (Capped)')
 plt.title('Applicant Income vs Loan Amount')
 plt.grid(True)
 
-# Plot: Boxplot of log_LoanAmount by Loan Status
 plt.subplot(1, 2, 2)
 sns.boxplot(x='Loan_Status', y='log_LoanAmount', data=df)
 plt.xlabel('Loan Status (0=Rejected, 1=Approved)')
