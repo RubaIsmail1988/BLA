@@ -1,5 +1,25 @@
-AppData/
+# created by virtualenv automatically
+*# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+MLT_Project/
+
+# Django DB
+db.sqlite3
+
+# Local settings
 *.log
-*.7z
-/Documents/
-/Videos/
+*.json
+
+# Model files
+*.pkl
+
+# Static and media
+/static/
+/media/
+
+# VSCode
+.vscode/
+
