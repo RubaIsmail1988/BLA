@@ -12,7 +12,7 @@ import seaborn as sns
 # 1. Load the dataset
 df = pd.read_csv("D:/SVU/My_Clases/second/MLT/MLT_Assainment/loan_prediction.csv")
 
-# 2. Drop Loan_ID column 
+# 2. Drop Loan_ID column if it exists
 df.drop(columns=["Loan_ID"], inplace=True, errors="ignore")
 
 # 3. Fill missing values
