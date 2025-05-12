@@ -37,9 +37,6 @@ for col in ['LoanAmount', 'ApplicantIncome', 'CoapplicantIncome']:
     if col in df.columns:
         df[f'log_{col}'] = np.log1p(df[col])
 
-# Convert '3+' in Dependents to 3
-df['Dependents'] = df['Dependents'].replace('3+', '3')
-
 # 4. One-hot encode categorical variables
 categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
 categorical_cols.remove('Loan_Status')
