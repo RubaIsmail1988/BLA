@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
 from pathlib import Path
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,9 +24,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-)^cs1d^hf$^21@p6aku(mg39uk6v8))&f2_y5h@9vvz%p&56gz'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-
+ALLOWED_HOSTS = ['*']
 DEBUG = False
-ALLOWED_HOSTS = ['mohamadalras80.pythonanywhere.com']
 
 
 # Application definition
@@ -74,10 +74,7 @@ WSGI_APPLICATION = 'BLA.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
 }
 
 
