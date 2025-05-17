@@ -14,6 +14,7 @@ import seaborn as sns
 df = pd.read_csv("BLA/loan_prediction/dataset/loan_prediction.csv")
 df.drop("Loan_ID", axis=1, inplace=True)
 
+
 # 2. Handle missing values
 cat_cols = ['Gender', 'Married', 'Dependents', 'Self_Employed', 'Credit_History', 'Loan_Amount_Term']
 for col in cat_cols:
@@ -31,41 +32,37 @@ for col in num_cols:
         df[col] = np.clip(df[col], lower, upper)  # Cap outliers
         df[col] = df.groupby(['Married', 'Education'])[col].transform(lambda x: x.fillna(x.median()))  # Fill nulls with median by group
 
-# 3. Log transform to reduce skewness
-for col in ['LoanAmount', 'ApplicantIncome', 'CoapplicantIncome']:
-    if col in df.columns:
-        df[f'log_{col}'] = np.log1p(df[col])  # log1p for numerical stability
 
-# 4. Convert '3+' to integer
+# 3. Convert '3+' to integer
 df['Dependents'] = df['Dependents'].replace('3+', '3')
 
-# 5. One-hot encode categorical features
+# 4. One-hot encode categorical features
 categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
 categorical_cols.remove('Loan_Status')
 df = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
 
-# 6. Encode target variable
+# 5. Encode target variable
 le = LabelEncoder()
 df['Loan_Status'] = le.fit_transform(df['Loan_Status'])
 
-# 7. Define features and target
+# 6. Define features and target
 X = df.drop("Loan_Status", axis=1)
 y = df["Loan_Status"]
 
-# 8. Standardize features
+# 7. Standardize features
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-# 9. Train/test split
+# 8. Train/test split
 X_train, X_test, y_train, y_test = train_test_split(
     X_scaled, y, test_size=0.2, stratify=y, random_state=42
 )
 
-# 10. Handle class imbalance using SMOTE
+# 9. Handle class imbalance using SMOTE
 sm = SMOTE(random_state=42)
 X_train_res, y_train_res = sm.fit_resample(X_train, y_train)
 
-# 11. Train logistic regression model
+# 10. Train logistic regression model
 model = LogisticRegression(
     max_iter=2000,
     class_weight='balanced',
@@ -74,7 +71,7 @@ model = LogisticRegression(
 )
 model.fit(X_train_res, y_train_res)
 
-# 12. Evaluate the model
+# 11. Evaluate the model
 y_pred = model.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
 report = classification_report(y_test, y_pred, output_dict=True)
@@ -86,7 +83,7 @@ print(conf_matrix)
 print("Classification Report:")
 print(classification_report(y_test, y_pred, digits=2))
 
-# 13. Save evaluation metrics to JSON 
+# 12. Save evaluation metrics to JSON
 model_dir = "BLA/loan_prediction/model"
 os.makedirs(model_dir, exist_ok=True)
 
@@ -112,7 +109,7 @@ with open(os.path.join(model_dir, "lr_metrics.json"), "w") as f:
 
 print("Evaluation metrics saved to lr_metrics.json.")
 
-# 14. Save model parameters to JSON
+# 13. Save model parameters to JSON
 model_data = {
     "coefficients": model.coef_[0].tolist(),
     "intercept": model.intercept_[0],
@@ -126,7 +123,7 @@ with open(os.path.join(model_dir, "model_params.json"), "w") as f:
 
 print("Model parameters saved successfully as JSON.")
 
-# 15. Load model parameters from JSON for reuse
+# 14. Load model parameters from JSON for reuse
 with open(os.path.join(model_dir, "model_params.json"), "r") as f:
     model_data = json.load(f)
 
@@ -136,25 +133,25 @@ scaler_mean = np.array(model_data["scaler_mean"])         # Mean from training
 scaler_scale = np.array(model_data["scaler_scale"])       # Scale from training
 feature_names = model_data["feature_names"]               # Feature order
 
-# 16. Prepare input and apply scaling manually
+# 15. Prepare input and apply scaling manually
 X = df[feature_names].values
 X_scaled = (X - scaler_mean) / scaler_scale
 
-# 17. Define sigmoid function for logistic regression
+# 16. Define sigmoid function for logistic regression
 def sigmoid(z):
     """Sigmoid function supporting scalars and arrays."""
     z = np.array(z, dtype=np.float64)
     return 1 / (1 + np.exp(-z))
 
-# 18. Compute raw logits and convert to probabilities
+# 17. Compute raw logits and convert to probabilities
 logits = np.dot(X_scaled, coefficients) + intercept
 probabilities = sigmoid(logits)
 
-# 19. Convert probabilities to binary predictions
+# 18. Convert probabilities to binary predictions
 y_pred = (probabilities >= 0.5).astype(int)
 print("Predictions on the original scale:", y_pred)
 
-# 20. Visualization
+# 19. Visualization
 plt.figure(figsize=(10, 5))
 
 # Scatter plot of applicant income vs loan amount
@@ -167,7 +164,7 @@ plt.grid(True)
 
 # Boxplot of loan amount by loan status
 plt.subplot(1, 2, 2)
-sns.boxplot(x='Loan_Status', y='log_LoanAmount', data=df)
+sns.boxplot(x='Loan_Status', y='LoanAmount', data=df)
 plt.xlabel('Loan Status (0=Rejected, 1=Approved)')
 plt.ylabel('Log Loan Amount')
 plt.title('Loan Amount by Loan Status')
