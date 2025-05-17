@@ -58,8 +58,9 @@ def standard_scale(X):
 
 def logistic_sigmoid(x):
     """
-    Compute the sigmoid function
+    Compute the sigmoid function safely for scalars and arrays.
     """
+    x = np.asarray(x, dtype=np.float64)  # Ensure input is a NumPy array of floats
     return 1 / (1 + np.exp(-x))
 
 def predict_proba(X_raw):
