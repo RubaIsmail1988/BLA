@@ -40,14 +40,45 @@ except Exception as e:
 def home(request):
     return render(request, 'pages/home.html')
 
-# Loan Prediction View
-# Load the trained model and scaler from the pickle file
-model_data = joblib.load("loan_prediction/model/lr_model.pkl")
-model = model_data['model']
-scaler = model_data['scaler']
-
 # Prediction view
+with open("BLA/loan_prediction/model/model_params.json", "r") as f:
+    params = json.load(f)
+
+# Extract logistic regression coefficients, intercept, and scaler params
+coefficients = np.array(params["coefficients"])
+intercept = params["intercept"]
+mean = np.array(params["scaler_mean"])
+scale = np.array(params["scaler_scale"])
+
+def standard_scale(X):
+    """
+    Apply standard scaling: (X - mean) / scale
+    """
+    return (X - mean) / scale
+
+def logistic_sigmoid(x):
+    """
+    Compute the sigmoid function
+    """
+    return 1 / (1 + np.exp(-x))
+
+def predict_proba(X_raw):
+    """
+    Predict probability of positive class using
+    logistic regression parameters and manual scaling.
+    X_raw: numpy array of shape (1, n_features)
+    Returns: probability scalar
+    """
+    X_scaled = standard_scale(X_raw)
+    linear_output = np.dot(X_scaled, coefficients) + intercept
+    prob = logistic_sigmoid(linear_output)
+    return prob[0]  # Return scalar probability
+
 def predict_view(request):
+    """
+    View to handle loan prediction requests.
+    Keeps same interface as before: form, result, probability.
+    """
     result = None
     probability = None
 
@@ -56,7 +87,7 @@ def predict_view(request):
         if form.is_valid():
             data = form.cleaned_data
 
-            # Extract numerical and categorical features in the same order used during training
+            # Construct feature array in same order as model training
             input_features = np.array([
                 data['applicant_income'],
                 data['coapplicant_income'],
@@ -75,17 +106,13 @@ def predict_view(request):
                 int(data['dependents'] == '2'),
                 int(data['dependents'] in ['3', '3']),
                 int(data['loan_amount_term'] == 360.0)
-                # Removed loan_amount_term == 180.0 to match 17 features
             ]).reshape(1, -1)
 
-            # Scale the features
-            input_scaled = scaler.transform(input_features)
-
-            # Predict the probability of loan approval
-            prob = model.predict_proba(input_scaled)[0][1]
+            # Predict probability using manual logistic regression implementation
+            prob = predict_proba(input_features)
             probability = round(prob * 100, 2)
 
-            # Decision based on probability thresholds
+            # Define decision thresholds for result label
             if prob >= 0.7:
                 result = "Approved"
             elif prob >= 0.5:
@@ -93,21 +120,19 @@ def predict_view(request):
             else:
                 result = "Rejected"
 
-            # Save the form instance with prediction result
+            # Save form instance with predicted loan status
             loan_request = form.save(commit=False)
             loan_request.loan_status = result
             loan_request.save()
     else:
         form = LoanRequestForm()
 
-    # Render the prediction page with form and result
-    
+    # Render template with form, result, and probability
     return render(request, 'pages/predict.html', {
         'form': form,
         'result': result,
         'probability': probability
     })
-
 
 # Loan Requests Management View
 def manage_requests_view(request):
