@@ -8,6 +8,7 @@ class LoanRequest(models.Model):
     self_employed_choices = [('Yes', 'Yes'), ('No', 'No')]
     property_area_choices = [('Urban', 'Urban'), ('Rural', 'Rural'), ('Semiurban', 'Semiurban')]
     dependents_choices = [('0', '0'), ('1', '1'), ('2', '2'), ('3', '3')]
+    credit_history_choices = [(0.0, '0'), (1.0, '1')]
 
     gender = models.CharField(max_length=10, choices=gender_choices)
     married = models.CharField(max_length=10, choices=married_choices)
@@ -18,7 +19,7 @@ class LoanRequest(models.Model):
     coapplicant_income = models.FloatField(default=0)
     loan_amount = models.FloatField()
     loan_amount_term = models.FloatField()
-    credit_history = models.FloatField()
+    credit_history = models.FloatField(choices=credit_history_choices)
     property_area = models.CharField(max_length=20, choices=property_area_choices)
     loan_status = models.CharField(max_length=20, blank=True, null=True)
 

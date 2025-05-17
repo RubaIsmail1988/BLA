@@ -28,5 +28,5 @@ class LoanRequestForm(forms.ModelForm):
             'coapplicant_income': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
             'loan_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
             'loan_amount_term': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
-            'credit_history': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
+            'credit_history': forms.Select(attrs={'class': 'form-select'}),
         }

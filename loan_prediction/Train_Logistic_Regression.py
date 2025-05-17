@@ -86,10 +86,33 @@ print(conf_matrix)
 print("Classification Report:")
 print(classification_report(y_test, y_pred, digits=2))
 
-# 13. Save model parameters to JSON
+# 13. Save evaluation metrics to JSON 
 model_dir = "BLA/loan_prediction/model"
 os.makedirs(model_dir, exist_ok=True)
 
+metrics = {
+    "accuracy": accuracy,
+    "confusion_matrix": conf_matrix.tolist(),
+    "classification_report": {}
+}
+
+# Convert nested classification report to match expected template
+for label, values in report.items():
+    if isinstance(values, dict):  # avoid 'accuracy', 'macro avg' etc
+        metrics["classification_report"][label] = {
+            "precision": values.get("precision", 0),
+            "recall": values.get("recall", 0),
+            "f1_score": values.get("f1-score", 0),
+            "support": values.get("support", 0)
+        }
+
+# Save to JSON
+with open(os.path.join(model_dir, "lr_metrics.json"), "w") as f:
+    json.dump(metrics, f, indent=4)
+
+print("Evaluation metrics saved to lr_metrics.json.")
+
+# 14. Save model parameters to JSON
 model_data = {
     "coefficients": model.coef_[0].tolist(),
     "intercept": model.intercept_[0],
@@ -103,7 +126,7 @@ with open(os.path.join(model_dir, "model_params.json"), "w") as f:
 
 print("Model parameters saved successfully as JSON.")
 
-# 14. Load model parameters from JSON for reuse
+# 15. Load model parameters from JSON for reuse
 with open(os.path.join(model_dir, "model_params.json"), "r") as f:
     model_data = json.load(f)
 
@@ -113,25 +136,25 @@ scaler_mean = np.array(model_data["scaler_mean"])         # Mean from training
 scaler_scale = np.array(model_data["scaler_scale"])       # Scale from training
 feature_names = model_data["feature_names"]               # Feature order
 
-# 15. Prepare input and apply scaling manually
+# 16. Prepare input and apply scaling manually
 X = df[feature_names].values
 X_scaled = (X - scaler_mean) / scaler_scale
 
-# 16. Define sigmoid function for logistic regression
+# 17. Define sigmoid function for logistic regression
 def sigmoid(z):
     """Sigmoid function supporting scalars and arrays."""
     z = np.array(z, dtype=np.float64)
     return 1 / (1 + np.exp(-z))
 
-# 17. Compute raw logits and convert to probabilities
+# 18. Compute raw logits and convert to probabilities
 logits = np.dot(X_scaled, coefficients) + intercept
 probabilities = sigmoid(logits)
 
-# 18. Convert probabilities to binary predictions
+# 19. Convert probabilities to binary predictions
 y_pred = (probabilities >= 0.5).astype(int)
 print("Predictions on the original scale:", y_pred)
 
-# 19. Visualization
+# 20. Visualization
 plt.figure(figsize=(10, 5))
 
 # Scatter plot of applicant income vs loan amount
