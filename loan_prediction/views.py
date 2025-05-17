@@ -1,7 +1,5 @@
 import os
 import json
-import joblib
-import base64
 import io
 
 import numpy as np
@@ -10,45 +8,35 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
-import base64
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from .forms import LoanRequestForm
 from .models import LoanRequest
-
+import base64
 
 # Load model, scaler, and feature names
 model = None
 scaler = None
 feature_names = None
 
-try:
-    model_path = os.path.join(settings.BASE_DIR, 'loan_prediction', 'model', 'lr_model.pkl')
-    with open(model_path, 'rb') as f:
-        model_data = joblib.load(f)
-        model = model_data['model']
-        scaler = model_data['scaler']
-
-    features_path = os.path.join(settings.BASE_DIR, 'loan_prediction', 'model', 'feature_names.pkl')
-    feature_names = joblib.load(features_path)
-
-except Exception as e:
-    print(f"Error loading model, scaler, or feature names: {e}")
 
 # Home Page View
 def home(request):
     return render(request, 'pages/home.html')
 
 # Prediction view
-with open("BLA/loan_prediction/model/model_params.json", "r") as f:
-    params = json.load(f)
+
+model_params_path = os.path.join(settings.BASE_DIR, 'loan_prediction', 'model', 'model_params.json')
+with open(model_params_path, "r") as f:
+    model_params = json.load(f)
+
 
 # Extract logistic regression coefficients, intercept, and scaler params
-coefficients = np.array(params["coefficients"])
-intercept = params["intercept"]
-mean = np.array(params["scaler_mean"])
-scale = np.array(params["scaler_scale"])
+coefficients = np.array(model_params["coefficients"])
+intercept = model_params["intercept"]
+mean = np.array(model_params["scaler_mean"])
+scale = np.array(model_params["scaler_scale"])
 
 def standard_scale(X):
     """
@@ -145,7 +133,7 @@ def manage_requests_view(request):
 
     requests = LoanRequest.objects.all()
     return render(request, 'pages/requests.html', {'requests': requests})
-    
+
 
 def eda_view(request):
     plots = {}
