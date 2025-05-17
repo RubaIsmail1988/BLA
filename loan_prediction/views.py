@@ -32,7 +32,7 @@ with open(model_params_path, "r") as f:
     model_params = json.load(f)
 
 
-# Extract logistic regression coefficients, intercept, and scaler params
+# Extract logistic regression coefficients, intercept, and scaler model_params
 coefficients = np.array(model_params["coefficients"])
 intercept = model_params["intercept"]
 mean = np.array(model_params["scaler_mean"])
