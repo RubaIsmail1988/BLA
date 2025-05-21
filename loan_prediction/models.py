@@ -4,7 +4,7 @@ from django.db import models
 class LoanRequest(models.Model):
     gender_choices = [('Male', 'Male'), ('Female', 'Female')]
     married_choices = [('Yes', 'Yes'), ('No', 'No')]
-    education_choices = [('Graduate', 'Graduate'), ('Not Graduate', 'Not Graduate')]
+    education_choices = [(1, 'Graduate'), (0, 'Not Graduate')] 
     self_employed_choices = [('Yes', 'Yes'), ('No', 'No')]
     property_area_choices = [('Urban', 'Urban'), ('Rural', 'Rural'), ('Semiurban', 'Semiurban')]
     dependents_choices = [('0', '0'), ('1', '1'), ('2', '2'), ('3', '3')]
@@ -13,9 +13,9 @@ class LoanRequest(models.Model):
     gender = models.CharField(max_length=10, choices=gender_choices)
     married = models.CharField(max_length=10, choices=married_choices)
     dependents = models.CharField(max_length=5, choices=dependents_choices)
-    education = models.CharField(max_length=20, choices=education_choices)
+    education = models.IntegerField(choices=education_choices)
     self_employed = models.CharField(max_length=10, choices=self_employed_choices)
-    applicant_income = models.FloatField(default=0) 
+    applicant_income = models.FloatField(default=0)
     coapplicant_income = models.FloatField(default=0)
     loan_amount = models.FloatField()
     loan_amount_term = models.FloatField()

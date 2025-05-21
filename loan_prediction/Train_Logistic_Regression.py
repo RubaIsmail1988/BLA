@@ -14,7 +14,6 @@ import seaborn as sns
 df = pd.read_csv("BLA/loan_prediction/dataset/loan_prediction.csv")
 df.drop("Loan_ID", axis=1, inplace=True)
 
-
 # 2. Handle missing values
 cat_cols = ['Gender', 'Married', 'Dependents', 'Self_Employed', 'Credit_History', 'Loan_Amount_Term']
 for col in cat_cols:
@@ -32,37 +31,64 @@ for col in num_cols:
         df[col] = np.clip(df[col], lower, upper)  # Cap outliers
         df[col] = df.groupby(['Married', 'Education'])[col].transform(lambda x: x.fillna(x.median()))  # Fill nulls with median by group
 
-
-# 3. Convert '3+' to integer
+# 3. Convert '3+' to integer in Dependents
 df['Dependents'] = df['Dependents'].replace('3+', '3')
+df['Dependents'] = df['Dependents'].astype(int)
 
-# 4. One-hot encode categorical features
+
+# 4. One-hot encode categorical features (except target)
 categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
 categorical_cols.remove('Loan_Status')
+
+# Use get_dummies with drop_first=True to avoid multicollinearity
 df = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
 
 # 5. Encode target variable
 le = LabelEncoder()
 df['Loan_Status'] = le.fit_transform(df['Loan_Status'])
 
-# 6. Define features and target
-X = df.drop("Loan_Status", axis=1)
+# 6. Define feature columns explicitly to fix order and names
+feature_names = [
+    "ApplicantIncome",
+    "CoapplicantIncome",
+    "LoanAmount",
+    "Loan_Amount_Term",
+    "Credit_History",
+    "Gender_Male",
+    "Married_Yes",
+    "Dependents_1",
+    "Dependents_2",
+    "Dependents_3",
+    "Education_Not Graduate",
+    "Self_Employed_Yes",
+    "Property_Area_Semiurban",
+    "Property_Area_Urban"
+]
+
+# 7. Confirm all features exist in dataframe (if some missing, add zero column)
+for feat in feature_names:
+    if feat not in df.columns:
+        print(f"Feature '{feat}' not found in dataframe, adding column with zeros.")
+        df[feat] = 0  # add missing columns as zeros for consistency
+
+# 8. Extract features and target in fixed order
+X = df[feature_names]
 y = df["Loan_Status"]
 
-# 7. Standardize features
+# 9. Standardize features
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-# 8. Train/test split
+# 10. Train/test split
 X_train, X_test, y_train, y_test = train_test_split(
     X_scaled, y, test_size=0.2, stratify=y, random_state=42
 )
 
-# 9. Handle class imbalance using SMOTE
+# 11. Handle class imbalance with SMOTE
 sm = SMOTE(random_state=42)
 X_train_res, y_train_res = sm.fit_resample(X_train, y_train)
 
-# 10. Train logistic regression model
+# 12. Train logistic regression
 model = LogisticRegression(
     max_iter=2000,
     class_weight='balanced',
@@ -71,7 +97,7 @@ model = LogisticRegression(
 )
 model.fit(X_train_res, y_train_res)
 
-# 11. Evaluate the model
+# 13. Evaluate model
 y_pred = model.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
 report = classification_report(y_test, y_pred, output_dict=True)
@@ -83,7 +109,7 @@ print(conf_matrix)
 print("Classification Report:")
 print(classification_report(y_test, y_pred, digits=2))
 
-# 12. Save evaluation metrics to JSON
+# 14. Save evaluation metrics to JSON
 model_dir = "BLA/loan_prediction/model"
 os.makedirs(model_dir, exist_ok=True)
 
@@ -93,9 +119,8 @@ metrics = {
     "classification_report": {}
 }
 
-# Convert nested classification report to match expected template
 for label, values in report.items():
-    if isinstance(values, dict):  # avoid 'accuracy', 'macro avg' etc
+    if isinstance(values, dict):
         metrics["classification_report"][label] = {
             "precision": values.get("precision", 0),
             "recall": values.get("recall", 0),
@@ -103,19 +128,18 @@ for label, values in report.items():
             "support": values.get("support", 0)
         }
 
-# Save to JSON
 with open(os.path.join(model_dir, "lr_metrics.json"), "w") as f:
     json.dump(metrics, f, indent=4)
 
 print("Evaluation metrics saved to lr_metrics.json.")
 
-# 13. Save model parameters to JSON
+# 15. Save model parameters to JSON with fixed feature_names order
 model_data = {
     "coefficients": model.coef_[0].tolist(),
     "intercept": model.intercept_[0],
     "scaler_mean": scaler.mean_.tolist(),
     "scaler_scale": scaler.scale_.tolist(),
-    "feature_names": X.columns.tolist()
+    "feature_names": feature_names
 }
 
 with open(os.path.join(model_dir, "model_params.json"), "w") as f:
@@ -123,38 +147,8 @@ with open(os.path.join(model_dir, "model_params.json"), "w") as f:
 
 print("Model parameters saved successfully as JSON.")
 
-# 14. Load model parameters from JSON for reuse
-with open(os.path.join(model_dir, "model_params.json"), "r") as f:
-    model_data = json.load(f)
-
-coefficients = np.array(model_data["coefficients"])       # Model weights
-intercept = model_data["intercept"]                       # Model bias
-scaler_mean = np.array(model_data["scaler_mean"])         # Mean from training
-scaler_scale = np.array(model_data["scaler_scale"])       # Scale from training
-feature_names = model_data["feature_names"]               # Feature order
-
-# 15. Prepare input and apply scaling manually
-X = df[feature_names].values
-X_scaled = (X - scaler_mean) / scaler_scale
-
-# 16. Define sigmoid function for logistic regression
-def sigmoid(z):
-    """Sigmoid function supporting scalars and arrays."""
-    z = np.array(z, dtype=np.float64)
-    return 1 / (1 + np.exp(-z))
-
-# 17. Compute raw logits and convert to probabilities
-logits = np.dot(X_scaled, coefficients) + intercept
-probabilities = sigmoid(logits)
-
-# 18. Convert probabilities to binary predictions
-y_pred = (probabilities >= 0.5).astype(int)
-print("Predictions on the original scale:", y_pred)
-
-# 19. Visualization
+# Visualization (optional, unchanged)
 plt.figure(figsize=(10, 5))
-
-# Scatter plot of applicant income vs loan amount
 plt.subplot(1, 2, 1)
 plt.scatter(df['ApplicantIncome'], df['LoanAmount'], alpha=0.6)
 plt.xlabel('Applicant Income (Capped)')
@@ -162,11 +156,10 @@ plt.ylabel('Loan Amount (Capped)')
 plt.title('Applicant Income vs Loan Amount')
 plt.grid(True)
 
-# Boxplot of loan amount by loan status
 plt.subplot(1, 2, 2)
 sns.boxplot(x='Loan_Status', y='LoanAmount', data=df)
 plt.xlabel('Loan Status (0=Rejected, 1=Approved)')
-plt.ylabel('Log Loan Amount')
+plt.ylabel('Loan Amount')
 plt.title('Loan Amount by Loan Status')
 
 plt.tight_layout()

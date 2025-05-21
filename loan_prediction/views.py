@@ -15,24 +15,11 @@ from .forms import LoanRequestForm
 from .models import LoanRequest
 import base64
 
-# Load model, scaler, and feature names
-model = None
-scaler = None
-feature_names = None
-
-
-# Home Page View
-def home(request):
-    return render(request, 'pages/home.html')
-
-# Prediction view
-
+# Load logistic regression parameters and scaler stats from JSON once
 model_params_path = os.path.join(settings.BASE_DIR, 'loan_prediction', 'model', 'model_params.json')
 with open(model_params_path, "r") as f:
     model_params = json.load(f)
-
-
-# Extract logistic regression coefficients, intercept, and scaler model_params
+    
 coefficients = np.array(model_params["coefficients"])
 intercept = model_params["intercept"]
 mean = np.array(model_params["scaler_mean"])
@@ -41,32 +28,42 @@ scale = np.array(model_params["scaler_scale"])
 def standard_scale(X):
     """
     Apply standard scaling: (X - mean) / scale
+    Input: X - numpy array of raw feature values
+    Output: scaled features as numpy array
     """
     return (X - mean) / scale
 
 def logistic_sigmoid(x):
     """
-    Compute the sigmoid function safely for scalars and arrays.
+    Compute the logistic sigmoid function element-wise.
     """
-    x = np.asarray(x, dtype=np.float64)  # Ensure input is a NumPy array of floats
+    x = np.asarray(x, dtype=np.float64)
     return 1 / (1 + np.exp(-x))
 
 def predict_proba(X_raw):
     """
-    Predict probability of positive class using
-    logistic regression parameters and manual scaling.
-    X_raw: numpy array of shape (1, n_features)
-    Returns: probability scalar
+    Predict probability for positive class given raw feature vector.
+    Steps:
+    - Standard scale features
+    - Calculate linear combination with coefficients + intercept
+    - Apply sigmoid to get probability
     """
     X_scaled = standard_scale(X_raw)
     linear_output = np.dot(X_scaled, coefficients) + intercept
     prob = logistic_sigmoid(linear_output)
-    return prob[0]  # Return scalar probability
+    return prob[0]
+
+def home(request):
+    """Render home page."""
+    return render(request, 'pages/home.html')
 
 def predict_view(request):
     """
-    View to handle loan prediction requests.
-    Keeps same interface as before: form, result, probability.
+    Handle GET/POST requests for loan prediction.
+    - On GET: Show empty form.
+    - On POST: Validate form, transform inputs, predict probability using manual logistic regression.
+    - Classify into 'Approved', 'Under Review', or 'Rejected' based on probability thresholds.
+    - Save form data with predicted loan_status to DB.
     """
     result = None
     probability = None
@@ -76,54 +73,51 @@ def predict_view(request):
         if form.is_valid():
             data = form.cleaned_data
 
-            # Construct feature array in same order as model training
+            # Construct feature vector in exact order used in model training:
+            # Note: No log transform is applied here because training was done without it.
+            # Convert categorical string values to binary indicators as model expects.
             input_features = np.array([
-                data['applicant_income'],
-                data['coapplicant_income'],
-                data['loan_amount'],
-                np.log1p(data['loan_amount']),
-                np.log1p(data['applicant_income']),
-                np.log1p(data['coapplicant_income']),
-                float(data['credit_history']),
-                int(data['gender'] == 'Male'),
-                int(data['married'] == 'Yes'),
-                int(data['education'] == 'Graduate'),
-                int(data['self_employed'] == 'Yes'),
-                int(data['property_area'] == 'Semiurban'),
-                int(data['property_area'] == 'Urban'),
-                int(data['dependents'] == '1'),
-                int(data['dependents'] == '2'),
-                int(data['dependents'] in ['3', '3']),
-                int(data['loan_amount_term'] == 360.0)
+                data['applicant_income'],                  # ApplicantIncome
+                data['coapplicant_income'],                # CoapplicantIncome
+                data['loan_amount'],                       # LoanAmount
+                float(data['loan_amount_term']),           # Loan_Amount_Term 
+                float(data['credit_history']),             # Credit_History
+                int(data['gender'] == 'Male'),             # Gender_Male
+                int(data['married'] == 'Yes'),             # Married_Yes
+                int(data['dependents'] == '1'),            # Dependents_1
+                int(data['dependents'] == '2'),            # Dependents_2
+                int(data['dependents'] in ['3', '3+']),    # Dependents_3
+                int(data['education'] != 'Graduate'),      # Education_Not Graduate 
+                int(data['self_employed'] == 'Yes'),       # Self_Employed_Yes
+                int(data['property_area'] == 'Semiurban'), # Property_Area_Semiurban
+                int(data['property_area'] == 'Urban')      # Property_Area_Urban
             ]).reshape(1, -1)
 
-            # Predict probability using manual logistic regression implementation
+            # Calculate probability using manual logistic regression prediction
             prob = predict_proba(input_features)
-            probability = round(prob * 100, 2)
+            probability = round(prob * 100, 2)  # percentage
 
-            # Define decision thresholds for result label
-            if prob >= 0.7:
+            # Classification thresholds for loan decision
+            if prob >= 0.6:
                 result = "Approved"
             elif prob >= 0.5:
                 result = "Under Review"
             else:
                 result = "Rejected"
 
-            # Save form instance with predicted loan status
+            # Save loan request with predicted loan_status to database
             loan_request = form.save(commit=False)
             loan_request.loan_status = result
             loan_request.save()
     else:
         form = LoanRequestForm()
 
-    # Render template with form, result, and probability
     return render(request, 'pages/predict.html', {
         'form': form,
         'result': result,
         'probability': probability
     })
 
-# Loan Requests Management View
 def manage_requests_view(request):
     if request.method == 'POST':
         req_id = request.POST.get('request_id')
@@ -134,29 +128,25 @@ def manage_requests_view(request):
     requests = LoanRequest.objects.all()
     return render(request, 'pages/requests.html', {'requests': requests})
 
-
 def eda_view(request):
     plots = {}
     data_table = []
 
     try:
-        # Load all loan requests from the database
         queryset = LoanRequest.objects.all()
-
-        # Convert queryset to DataFrame
         df = pd.DataFrame(list(queryset.values()))
 
         if df.empty:
             raise ValueError("No loan requests in the database.")
 
-        # Convert categorical fields to appropriate type
+        # Map DB fields to dataframe columns expected by plots
         df['Credit_History'] = df['credit_history'].fillna(0)
         df['LoanAmount'] = df['loan_amount']
         df['ApplicantIncome'] = df['applicant_income']
         df['Loan_Status'] = df['loan_status']
         df['Property_Area'] = df['property_area']
 
-        # Plot 1: Applicant Income vs Loan Amount
+        # Scatter plot: Applicant Income vs Loan Amount
         fig1, ax1 = plt.subplots()
         ax1.scatter(df['ApplicantIncome'], df['LoanAmount'], alpha=0.5)
         ax1.set_xlabel('Applicant Income')
@@ -168,7 +158,7 @@ def eda_view(request):
         plt.close(fig1)
         plots['Income vs Loan'] = base64.b64encode(buf1.getvalue()).decode('utf-8')
 
-        # Plot 2: Boxplot of Loan Amount by Loan Status
+        # Boxplot: Loan Amount by Loan Status
         fig2, ax2 = plt.subplots()
         sns.boxplot(x='Loan_Status', y='LoanAmount', data=df, ax=ax2)
         ax2.set_title('Loan Amount Distribution by Status')
@@ -178,7 +168,7 @@ def eda_view(request):
         plt.close(fig2)
         plots['Loan Amount by Status'] = base64.b64encode(buf2.getvalue()).decode('utf-8')
 
-        # Plot 3: Countplot of Credit History
+        # Countplot: Credit History vs Loan Status
         fig3, ax3 = plt.subplots()
         sns.countplot(x='Credit_History', hue='Loan_Status', data=df, ax=ax3)
         ax3.set_title('Loan Status by Credit History')
@@ -188,7 +178,7 @@ def eda_view(request):
         plt.close(fig3)
         plots['Credit History'] = base64.b64encode(buf3.getvalue()).decode('utf-8')
 
-        # Plot 4: Countplot of Property Area
+        # Countplot: Property Area vs Loan Status
         fig4, ax4 = plt.subplots()
         sns.countplot(x='Property_Area', hue='Loan_Status', data=df, ax=ax4)
         ax4.set_title('Loan Status by Property Area')
@@ -198,7 +188,7 @@ def eda_view(request):
         plt.close(fig4)
         plots['Property Area'] = base64.b64encode(buf4.getvalue()).decode('utf-8')
 
-        # Convert first 10 records to dict for HTML table
+        # Prepare first 10 records for table display
         data_table = df.head(10).to_dict(orient='records')
 
     except Exception as e:

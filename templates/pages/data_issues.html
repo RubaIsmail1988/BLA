@@ -65,18 +65,17 @@
             Instead of simply predicting "Approved" or "Rejected", the model outputs a <strong>probability score</strong> representing the likelihood that a loan will be approved. This percentage is then used to make a more informed decision based on the following logic:
         </p>
         <ul>
-            <li><strong>Probability ≥ 70%:</strong> The request is <span class="text-success fw-bold">automatically approved</span>.</li>
-            <li><strong>50% ≤ Probability &lt; 70%:</strong> The request is <span class="text-warning fw-bold">under review</span>. Additional criteria can be checked to support the decision.</li>
+            <li><strong>Probability ≥ 60%:</strong> The request is <span class="text-success fw-bold">automatically approved</span>.</li>
+            <li><strong>50% ≤ Probability &lt; 60%:</strong> The request is <span class="text-warning fw-bold">under review</span>. Additional criteria can be checked to support the decision.</li>
             <li><strong>Probability &lt; 50%:</strong> The request is <span class="text-danger fw-bold">automatically rejected</span>.</li>
         </ul>
         <p>Example: "This request is 73% likely to be approved."</p>
         <hr>
         <p>
-            In the review stage (50%–70%), banks may take into account specific features to support or override the decision:
+            In the review stage (50%–60%), banks may take into account specific features to support or override the decision:
         </p>
         <ul>
-            <li><strong>Credit_History:</strong> If available and reliable, a request might be accepted even at 60%.</li>
-            <li><strong>CoapplicantIncome:</strong> Joint incomes may indicate more financial stability.</li>
+            <li><strong>Credit_History:</strong> If available and reliable, a request might be accepted even at 50%.</li>
             <li><strong>Low LoanAmount:</strong> Small loans may justify relaxed acceptance criteria.</li>
             <li><strong>Education = Graduate:</strong> Educated applicants generally have better repayment behavior.</li>
         </ul>
